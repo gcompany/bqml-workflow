@@ -1,0 +1,75 @@
+- init:
+    assign:
+        - project_id: PROJECT_ID
+        - dataset_id: DATASET_ID
+        - create_slots_query: ${"CALL `" +project_id+ "." +dataset_id+ ".get_slots`()"}
+        - train_model_query: ${"CALL `" +project_id+ "." +dataset_id+ ".train_model`()"}
+        - drop_slots_query: ${"CALL `" +project_id+ "." +dataset_id+ ".drop_slots`()"}
+- create_slots:
+    call: googleapis.bigquery.v2.jobs.insert
+    args:
+        projectId: ${project_id}
+        body:
+            configuration:
+                query:
+                    query: ${create_slots_query}
+                    useLegacySql: false
+    result: create_job_response
+- log_create_job_id:
+    call: sys.log
+    args:
+        text: ${"Creating slots. Job id " + create_job_response.jobReference.jobId}
+- wait_for_slots:
+    call: sys.sleep
+    args:
+        seconds: 120
+- train_model:
+    call: googleapis.bigquery.v2.jobs.insert
+    args:
+        projectId: ${project_id}
+        body:
+            configuration:
+                query:
+                    query: ${train_model_query}
+                    useLegacySql: false
+                    priority: BATCH
+    result: train_job_response
+- get_train_job_info:
+    call: googleapis.bigquery.v2.jobs.get
+    args:
+        projectId: ${project_id}
+        jobId: ${train_job_response.jobReference.jobId}
+    result: train_job_info
+- check_train_job_state:
+    switch:
+        - condition: ${train_job_info.status.state != "DONE"}
+          steps:
+            - log_train_status:
+                call: sys.log
+                args:
+                    text: Still training
+                    severity: INFO
+            - wait_for_training:
+                call: sys.sleep
+                args:
+                    seconds: 60
+                next: get_train_job_info
+    next: drop_slots
+- drop_slots:
+    call: googleapis.bigquery.v2.jobs.insert
+    args:
+        projectId: ${project_id}
+        body:
+            configuration:
+                query:
+                    query: ${drop_slots_query}
+                    useLegacySql: false
+    result: drop_job_response
+- get_drop_job_info:
+    call: googleapis.bigquery.v2.jobs.get
+    args:
+        projectId: ${project_id}
+        jobId: ${drop_job_response.jobReference.jobId}
+    result: drop_job_info
+- the_end:
+    return: ${"Slots dropped? " + drop_job_info.status.state}
