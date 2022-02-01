@@ -1,6 +1,6 @@
 ## BigQuery ML, Reservations and Cloud Workflows
 
-This repo accompanies a blog post (link coming soon) on how to set up BigQuery Flex slots in order to train a matrix factorization model, and how to automate the required steps with Cloud Workflows.
+This repo accompanies a [blog post](https://medium.com/g-company/build-a-recommender-with-bigquery-ml-15e67a457548) on how to set up BigQuery Flex slots in order to train a matrix factorization model, and how to automate the required steps with Cloud Workflows.
 
 The setup consists of two parts:
 
